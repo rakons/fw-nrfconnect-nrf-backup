@@ -210,6 +210,22 @@ static void disconnected(struct bt_conn *conn, u8_t reason)
 	}
 }
 
+static void bonded_enable_autoconnection(const struct bt_bond_info *info, void *user_data)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	int err;
+	bt_addr_le_to_str(&info->addr, addr, sizeof(addr));
+	err = bt_le_set_auto_conn(&info->addr, BT_LE_CONN_PARAM_DEFAULT);
+	if (!err)
+	{
+		LOG_ERR("Cannot set autoconnection for %s", log_strdup(addr));
+	}
+	else
+	{
+		LOG_ERR("Autoconnection configured for %s", log_strdup(addr));
+	}
+}
+
 static void bt_ready(int bt_err)
 {
 	int err;
@@ -224,6 +240,10 @@ static void bt_ready(int bt_err)
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
 		settings_load();
 	}
+
+	/* Autoconnect to every already paired device */
+	bt_foreach_bond(BT_ID_DEFAULT, bonded_enable_autoconnection, NULL);
+
 
 	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, device_found);
 	if (err) {
